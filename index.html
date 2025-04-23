@@ -139,10 +139,20 @@
         background-color: #e8eaf6;
       }
 
-      /* Daily View Styles */
+      /* Daily View Styles - MODIFIED FOR FIXED COLUMNS */
+      .daily-view-container {
+        position: relative;
+        max-height: 600px; /* Set max height for scrollable area */
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+
       .daily-view table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed; /* Fixed table layout */
       }
 
       .daily-view th {
@@ -150,13 +160,17 @@
         color: white;
         padding: 10px;
         text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
       }
 
       .daily-view td {
         padding: 15px 10px;
-        text-align: center;
         background-color: #e8eaf6;
         border-bottom: 1px solid white;
+        word-wrap: break-word; /* Allow text to wrap */
+        overflow-wrap: break-word;
       }
 
       .daily-view tr:nth-child(odd) td {
@@ -167,6 +181,21 @@
         width: 100px;
         background-color: #c5cae9;
         font-weight: bold;
+        position: sticky;
+        left: 0;
+        z-index: 5;
+      }
+
+      /* Add shadow to indicate fixed column */
+      .daily-view .jam-column::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 5px;
+        pointer-events: none;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
       }
 
       .daily-view .agenda-column {
@@ -216,6 +245,14 @@
 
       .jumat .day-header {
         background-color: #8bc34a;
+      }
+
+      .sabtu .day-header {
+        background-color: #9c27b0; /* Purple */
+      }
+
+      .minggu .day-header {
+        background-color: #009688; /* Teal */
       }
 
       .day-content {
@@ -278,6 +315,31 @@
         font-style: italic;
       }
 
+      .daily-view a {
+        color: #3f51b5;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .daily-view a:hover {
+        color: #1a237e;
+        text-decoration: underline;
+      }
+
+      /* Tambahkan di bagian <style> pada head dokumen */
+      .weekend-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0; /* Tidak ada spasi antara card weekend */
+      }
+
+      /* Pada tampilan mobile, atur weekend-container agar tetap terlihat baik */
+      @media (max-width: 768px) {
+        .weekend-container {
+          width: 100%;
+        }
+      }
+
       /* Responsive adjustments */
       @media (max-width: 768px) {
         .weekly-view {
@@ -334,29 +396,42 @@
       </div>
     </div>
     <script>
-
-    document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener("DOMContentLoaded", function () {
         // Existing initialization code...
         const today = new Date();
-        const monthNames = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
-        document.getElementById('current-month').textContent = monthNames[today.getMonth()];
-        document.getElementById('current-day').textContent = today.getDate();
-        
+        const monthNames = [
+          "JANUARI",
+          "FEBRUARI",
+          "MARET",
+          "APRIL",
+          "MEI",
+          "JUNI",
+          "JULI",
+          "AGUSTUS",
+          "SEPTEMBER",
+          "OKTOBER",
+          "NOVEMBER",
+          "DESEMBER",
+        ];
+        document.getElementById("current-month").textContent =
+          monthNames[today.getMonth()];
+        document.getElementById("current-day").textContent = today.getDate();
+
         // Tab handling
-        const tabs = document.querySelectorAll('.view-tab');
-        const contentArea = document.getElementById('content-area');
-        
+        const tabs = document.querySelectorAll(".view-tab");
+        const contentArea = document.getElementById("content-area");
+
         // Default view
-        let currentView = 'semua';
-        document.getElementById('semua-tab').classList.add('active');
-        
+        let currentView = "semua";
+        document.getElementById("semua-tab").classList.add("active");
+
         // All data storage
         let allActivities = [];
         let lastFetchTime = null;
-        
+
         // Set auto-refresh interval (in milliseconds)
         const REFRESH_INTERVAL = 60000; // 1 minute
-        
+
         // Auto rotation variables
         let inactivityTimer;
         let rotationInterval;
@@ -364,9 +439,9 @@
         const ROTATION_INTERVAL = 10000; // 10 seconds between view changes
         let isRotating = false;
         let userInteracted = false;
-        
+
         // Add CSS for smooth transitions
-        const style = document.createElement('style');
+        const style = document.createElement("style");
         style.textContent = `
             .fade-out {
                 opacity: 0;
@@ -383,228 +458,230 @@
             }
         `;
         document.head.appendChild(style);
-        
+
         // Debug function to help diagnose issues
         function debugInfo(message) {
-            console.log(message);
+          console.log(message);
         }
-        
+
         // Track user activity
         function resetInactivityTimer() {
-            userInteracted = true;
-            
-            // Clear existing timers
-            if (inactivityTimer) {
-                clearTimeout(inactivityTimer);
-            }
-            
-            // Stop rotation if it's happening
-            if (isRotating) {
-                stopAutoRotation();
-            }
-            
-            // Set new inactivity timer
-            inactivityTimer = setTimeout(() => {
-                userInteracted = false;
-                startAutoRotation();
-            }, INACTIVITY_TIMEOUT);
+          userInteracted = true;
+
+          // Clear existing timers
+          if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+          }
+
+          // Stop rotation if it's happening
+          if (isRotating) {
+            stopAutoRotation();
+          }
+
+          // Set new inactivity timer
+          inactivityTimer = setTimeout(() => {
+            userInteracted = false;
+            startAutoRotation();
+          }, INACTIVITY_TIMEOUT);
         }
-        
+
         // Add activity listeners to document
-        document.addEventListener('mousemove', resetInactivityTimer);
-        document.addEventListener('keypress', resetInactivityTimer);
-        document.addEventListener('click', resetInactivityTimer);
-        document.addEventListener('scroll', resetInactivityTimer);
-        document.addEventListener('touchstart', resetInactivityTimer);
-        
+        document.addEventListener("mousemove", resetInactivityTimer);
+        document.addEventListener("keypress", resetInactivityTimer);
+        document.addEventListener("click", resetInactivityTimer);
+        document.addEventListener("scroll", resetInactivityTimer);
+        document.addEventListener("touchstart", resetInactivityTimer);
+
         // Start the rotation between views
         function startAutoRotation() {
-            if (isRotating) return;
-            
-            isRotating = true;
-            debugInfo("Starting auto rotation between views");
-            
-            // Show indicator that auto rotation is active
-            showRotationIndicator(true);
-            
-            // Start with Hari Ini view
-            if (currentView !== 'hari-ini') {
-                switchTab('hari-ini-tab');
-            }
-            
-            // Set up the rotation interval
-            let currentRotationView = 'hari-ini';
-            rotationInterval = setInterval(() => {
-                // Toggle between hari-ini and minggu-ini
-                currentRotationView = (currentRotationView === 'hari-ini') ? 'minggu-ini' : 'hari-ini';
-                
-                // Use smooth transition
-                contentArea.classList.add('fade-out');
-                
+          if (isRotating) return;
+
+          isRotating = true;
+          debugInfo("Starting auto rotation between views");
+
+          // Show indicator that auto rotation is active
+          showRotationIndicator(true);
+
+          // Start with Hari Ini view
+          if (currentView !== "hari-ini") {
+            switchTab("hari-ini-tab");
+          }
+
+          // Set up the rotation interval
+          let currentRotationView = "hari-ini";
+          rotationInterval = setInterval(() => {
+            // Toggle between hari-ini and minggu-ini
+            currentRotationView =
+              currentRotationView === "hari-ini" ? "minggu-ini" : "hari-ini";
+
+            // Use smooth transition
+            contentArea.classList.add("fade-out");
+
+            setTimeout(() => {
+              switchTab(`${currentRotationView}-tab`);
+
+              setTimeout(() => {
+                contentArea.classList.remove("fade-out");
+                contentArea.classList.add("fade-in");
+
                 setTimeout(() => {
-                    switchTab(`${currentRotationView}-tab`);
-                    
-                    setTimeout(() => {
-                        contentArea.classList.remove('fade-out');
-                        contentArea.classList.add('fade-in');
-                        
-                        setTimeout(() => {
-                            contentArea.classList.remove('fade-in');
-                        }, 500);
-                    }, 50);
+                  contentArea.classList.remove("fade-in");
                 }, 500);
-                
-            }, ROTATION_INTERVAL);
+              }, 50);
+            }, 500);
+          }, ROTATION_INTERVAL);
         }
-        
+
         // Stop the auto rotation
         function stopAutoRotation() {
-            if (!isRotating) return;
-            
-            isRotating = false;
-            debugInfo("Stopping auto rotation");
-            
-            if (rotationInterval) {
-                clearInterval(rotationInterval);
-                rotationInterval = null;
-            } 
-            
-            // Hide rotation indicator
-            showRotationIndicator(false);
+          if (!isRotating) return;
+
+          isRotating = false;
+          debugInfo("Stopping auto rotation");
+
+          if (rotationInterval) {
+            clearInterval(rotationInterval);
+            rotationInterval = null;
+          }
+
+          // Hide rotation indicator
+          showRotationIndicator(false);
         }
-        
+
         // Show or hide rotation indicator
         function showRotationIndicator(show) {
-            let indicator = document.getElementById('rotation-indicator');
-            
-            if (!indicator && show) {
-                indicator = document.createElement('div');
-                indicator.id = 'rotation-indicator';
-                indicator.style.position = 'fixed';
-                indicator.style.bottom = '20px';
-                indicator.style.left = '20px';
-                indicator.style.background = 'rgba(63, 81, 181, 0.8)';
-                indicator.style.color = 'white';
-                indicator.style.padding = '8px 15px';
-                indicator.style.borderRadius = '20px';
-                indicator.style.fontSize = '12px';
-                indicator.style.zIndex = '1000';
-                indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-                indicator.style.display = 'flex';
-                indicator.style.alignItems = 'center';
-                indicator.style.gap = '8px';
-                indicator.innerHTML = `
+          let indicator = document.getElementById("rotation-indicator");
+
+          if (!indicator && show) {
+            indicator = document.createElement("div");
+            indicator.id = "rotation-indicator";
+            indicator.style.position = "fixed";
+            indicator.style.bottom = "20px";
+            indicator.style.left = "20px";
+            indicator.style.background = "rgba(63, 81, 181, 0.8)";
+            indicator.style.color = "white";
+            indicator.style.padding = "8px 15px";
+            indicator.style.borderRadius = "20px";
+            indicator.style.fontSize = "12px";
+            indicator.style.zIndex = "1000";
+            indicator.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+            indicator.style.display = "flex";
+            indicator.style.alignItems = "center";
+            indicator.style.gap = "8px";
+            indicator.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" 
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                     </svg>
                     Mode Rotasi Otomatis Aktif
                 `;
-                document.body.appendChild(indicator);
-                
-                // Add fade in animation
-                indicator.style.opacity = '0';
-                setTimeout(() => {
-                    indicator.style.transition = 'opacity 0.5s ease-in';
-                    indicator.style.opacity = '1';
-                }, 50);
-            } else if (indicator && !show) {
-                // Fade out before removing
-                indicator.style.transition = 'opacity 0.5s ease-out';
-                indicator.style.opacity = '0';
-                setTimeout(() => {
-                    if (indicator.parentNode) {
-                        indicator.parentNode.removeChild(indicator);
-                    }
-                }, 500);
-            }
+            document.body.appendChild(indicator);
+
+            // Add fade in animation
+            indicator.style.opacity = "0";
+            setTimeout(() => {
+              indicator.style.transition = "opacity 0.5s ease-in";
+              indicator.style.opacity = "1";
+            }, 50);
+          } else if (indicator && !show) {
+            // Fade out before removing
+            indicator.style.transition = "opacity 0.5s ease-out";
+            indicator.style.opacity = "0";
+            setTimeout(() => {
+              if (indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+              }
+            }, 500);
+          }
         }
-        
+
         // Add click event to tabs
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabId = this.id;
-                switchTab(tabId);
-            });
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", function () {
+            const tabId = this.id;
+            switchTab(tabId);
+          });
         });
-        
+
         // Function to switch tabs - extracted for reuse
         function switchTab(tabId) {
-            // Remove active class from all tabs
-            tabs.forEach(t => t.classList.remove('active'));
-            
-            // Add active class to selected tab
-            document.getElementById(tabId).classList.add('active');
-            
-            // Determine which view to show
-            if (tabId === 'semua-tab') {
-                currentView = 'semua';
-                loadFullTableView();
-            } else if (tabId === 'hari-ini-tab') {
-                currentView = 'hari-ini';
-                loadDailyView();
-            } else if (tabId === 'minggu-ini-tab') {
-                currentView = 'minggu-ini';
-                loadWeeklyView();
-            }
+          // Remove active class from all tabs
+          tabs.forEach((t) => t.classList.remove("active"));
+
+          // Add active class to selected tab
+          document.getElementById(tabId).classList.add("active");
+
+          // Determine which view to show
+          if (tabId === "semua-tab") {
+            currentView = "semua";
+            loadFullTableView();
+          } else if (tabId === "hari-ini-tab") {
+            currentView = "hari-ini";
+            loadDailyView();
+          } else if (tabId === "minggu-ini-tab") {
+            currentView = "minggu-ini";
+            loadWeeklyView();
+          }
         }
-        
+
         // Function to fetch and process data from Google Sheets
         async function fetchSpreadsheetData(forceRefresh = false) {
-            try {
-                // Define the spreadsheet ID and the public URL
-                const spreadsheetId = '1Kz4NedFuorHp-lFHachJ6zrYSJD7sbzoP8gty7zUKJQ';
-                
-                // Using Google Sheets API via a CORS proxy
-                const sheetUrl = `https://opensheet.elk.sh/${spreadsheetId}/Sheet1`;
-                
-                // Add a timestamp parameter to prevent caching
-                const noCache = new Date().getTime();
-                const urlWithCache = `${sheetUrl}?_nocache=${noCache}`;
-                
-                const response = await fetch(urlWithCache);
-                
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                
-                const data = await response.json();
-                
-                // Process data to match our expected format
-                const processedData = data.map(row => {
-                    // Normalize data - handle null values, convert "-" to empty strings for agenda
-                    const agenda = row.Agenda || "";
-                    return {
-                        Tanggal: row.Tanggal || "",
-                        Jam: row.Jam || "",
-                        Agenda: agenda,
-                        PIC: row.PIC || "",
-                        Tempat: row.Tempat || ""
-                    };
-                });
-                
-                // Store all activities globally
-                allActivities = processedData;
-                lastFetchTime = new Date();
-                
-                // Show a subtle notification if it was a refresh
-                if (forceRefresh) {
-                    const notification = document.createElement('div');
-                    notification.className = 'update-notification';
-                    notification.style.position = 'fixed';
-                    notification.style.bottom = '20px';
-                    notification.style.right = '20px';
-                    notification.style.background = '#4CAF50';
-                    notification.style.color = 'white';
-                    notification.style.padding = '10px 20px';
-                    notification.style.borderRadius = '4px';
-                    notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-                    notification.style.zIndex = '1000';
-                    notification.style.animation = 'fadeIn 0.3s, fadeOut 0.3s 2.7s forwards';
-                    
-                    // Add animation keyframes
-                    const style = document.createElement('style');
-                    style.textContent = `
+          try {
+            // Define the spreadsheet ID and the public URL
+            const spreadsheetId =
+              "1Kz4NedFuorHp-lFHachJ6zrYSJD7sbzoP8gty7zUKJQ";
+
+            // Using Google Sheets API via a CORS proxy
+            const sheetUrl = `https://opensheet.elk.sh/${spreadsheetId}/Sheet1`;
+
+            // Add a timestamp parameter to prevent caching
+            const noCache = new Date().getTime();
+            const urlWithCache = `${sheetUrl}?_nocache=${noCache}`;
+
+            const response = await fetch(urlWithCache);
+
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+
+            const data = await response.json();
+
+            // Process data to match our expected format
+            const processedData = data.map((row) => {
+              // Normalize data - handle null values, convert "-" to empty strings for agenda
+              const agenda = row.Agenda || "";
+              return {
+                Tanggal: row.Tanggal || "",
+                Jam: row.Jam || "",
+                Agenda: agenda,
+                PIC: row.PIC || "",
+                Tempat: row.Tempat || "",
+              };
+            });
+
+            // Store all activities globally
+            allActivities = processedData;
+            lastFetchTime = new Date();
+
+            // Show a subtle notification if it was a refresh
+            if (forceRefresh) {
+              const notification = document.createElement("div");
+              notification.className = "update-notification";
+              notification.style.position = "fixed";
+              notification.style.bottom = "20px";
+              notification.style.right = "20px";
+              notification.style.background = "#4CAF50";
+              notification.style.color = "white";
+              notification.style.padding = "10px 20px";
+              notification.style.borderRadius = "4px";
+              notification.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+              notification.style.zIndex = "1000";
+              notification.style.animation =
+                "fadeIn 0.3s, fadeOut 0.3s 2.7s forwards";
+
+              // Add animation keyframes
+              const style = document.createElement("style");
+              style.textContent = `
                         @keyframes fadeIn {
                             from { opacity: 0; }
                             to { opacity: 1; }
@@ -614,74 +691,80 @@
                             to { opacity: 0; }
                         }
                     `;
-                    document.head.appendChild(style);
-                    
-                    notification.textContent = 'Data berhasil diperbarui';
-                    document.body.appendChild(notification);
-                    
-                    // Remove notification after 3 seconds
-                    setTimeout(() => {
-                        if (document.body.contains(notification)) {
-                            document.body.removeChild(notification);
-                        }
-                    }, 3000);
-                    
-                    // Refresh the current view with new data
-                    refreshCurrentView();
+              document.head.appendChild(style);
+
+              notification.textContent = "Data berhasil diperbarui";
+              document.body.appendChild(notification);
+
+              // Remove notification after 3 seconds
+              setTimeout(() => {
+                if (document.body.contains(notification)) {
+                  document.body.removeChild(notification);
                 }
-                
-                return processedData;
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                
-                // Only show error if we don't have any data yet
-                if (allActivities.length === 0) {
-                    contentArea.innerHTML = `
+              }, 3000);
+
+              // Refresh the current view with new data
+              refreshCurrentView();
+            }
+
+            return processedData;
+          } catch (error) {
+            console.error("Error fetching data:", error);
+
+            // Only show error if we don't have any data yet
+            if (allActivities.length === 0) {
+              contentArea.innerHTML = `
                         <div class="error">
                             <p>Gagal memuat data dari spreadsheet.</p>
                             <p>Error: ${error.message}</p>
                         </div>
                     `;
-                }
-                
-                return allActivities; // Return existing data if available
             }
+
+            return allActivities; // Return existing data if available
+          }
         }
-        
+
         // Function to refresh the current view
         function refreshCurrentView() {
-            if (currentView === 'semua') {
-                loadFullTableView(false); // false means don't fetch again since we just did
-            } else if (currentView === 'hari-ini') {
-                loadDailyView(false);
-            } else if (currentView === 'minggu-ini') {
-                loadWeeklyView(false);
-            }
+          if (currentView === "semua") {
+            loadFullTableView(false); // false means don't fetch again since we just did
+          } else if (currentView === "hari-ini") {
+            loadDailyView(false);
+          } else if (currentView === "minggu-ini") {
+            loadWeeklyView(false);
+          }
         }
-        
+
         // Function to load the full table view (all activities)
         async function loadFullTableView(fetchData = true) {
-            contentArea.innerHTML = '<div class="loading">Memuat seluruh jadwal kegiatan...</div>';
-            
-            if (fetchData && allActivities.length === 0) {
-                await fetchSpreadsheetData();
-            }
-            
-            if (allActivities.length === 0) {
-                return; // Error already displayed in fetchSpreadsheetData
-            }
-            
-            // Filter out activities with empty or "-" agendas
-            const filteredActivities = allActivities.filter(activity => {
-                return activity.Agenda && activity.Agenda.trim() !== "" && activity.Agenda !== "-";
-            });
-            
-            if (filteredActivities.length === 0) {
-                contentArea.innerHTML = '<div class="no-data">Tidak ada kegiatan untuk ditampilkan</div>';
-                return;
-            }
-            
-            let tableHTML = `
+          contentArea.innerHTML =
+            '<div class="loading">Memuat seluruh jadwal kegiatan...</div>';
+
+          if (fetchData && allActivities.length === 0) {
+            await fetchSpreadsheetData();
+          }
+
+          if (allActivities.length === 0) {
+            return; // Error already displayed in fetchSpreadsheetData
+          }
+
+          // Filter out activities with empty or "-" agendas
+          const filteredActivities = allActivities.filter((activity) => {
+            return (
+              activity.Agenda &&
+              activity.Agenda.trim() !== "" &&
+              activity.Agenda !== "-"
+            );
+          });
+
+          if (filteredActivities.length === 0) {
+            contentArea.innerHTML =
+              '<div class="no-data">Tidak ada kegiatan untuk ditampilkan</div>';
+            return;
+          }
+
+          let tableHTML = `
                 <div class="full-table-view">
                     <table>
                         <thead>
@@ -695,9 +778,9 @@
                         </thead>
                         <tbody>
             `;
-            
-            filteredActivities.forEach(activity => {
-                tableHTML += `
+
+          filteredActivities.forEach((activity) => {
+            tableHTML += `
                     <tr>
                         <td>${activity.Tanggal}</td>
                         <td>${activity.Jam}</td>
@@ -706,65 +789,90 @@
                         <td>${activity.Tempat}</td>
                     </tr>
                 `;
-            });
-            
-            tableHTML += `
+          });
+
+          tableHTML += `
                         </tbody>
                     </table>
                 </div>
             `;
-            
-            contentArea.innerHTML = tableHTML;
+
+          contentArea.innerHTML = tableHTML;
         }
-        
+
         // Function to load daily view (today's activities)
         async function loadDailyView(fetchData = true) {
-            contentArea.innerHTML = '<div class="loading">Memuat jadwal hari ini...</div>';
-            
-            if (fetchData && allActivities.length === 0) {
-                await fetchSpreadsheetData();
-            }
-            
-            if (allActivities.length === 0) {
-                return; // Error already displayed in fetchSpreadsheetData
-            }
-            
-            // Format today's date to match spreadsheet format (e.g., "22-April-2025")
-            const today = new Date();
-            const day = today.getDate();
-            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-            const month = monthNames[today.getMonth()];
-            const year = today.getFullYear();
-            
-            const todayFormatted = `${day}-${month}-${year}`;
-            
-            debugInfo("Looking for activities on: " + todayFormatted);
-            
-            // Filter activities for today AND with non-empty agenda
-            const todayActivities = allActivities.filter(activity => {
-                debugInfo("Comparing: '" + activity.Tanggal + "' with '" + todayFormatted + "'");
-                return activity.Tanggal === todayFormatted && 
-                       activity.Agenda && 
-                       activity.Agenda.trim() !== "" && 
-                       activity.Agenda !== "-";
-            });
-            
-            debugInfo("Found " + todayActivities.length + " activities for today");
-            
-            if (todayActivities.length === 0) {
-                contentArea.innerHTML = '<div class="no-data">Tidak ada kegiatan untuk hari ini</div>';
-                return;
-            }
-            
-            // Sort activities by time
-            todayActivities.sort((a, b) => {
-                return a.Jam.localeCompare(b.Jam);
-            });
-            
-            // Create daily view table
-            let dailyViewHTML = `
+          contentArea.innerHTML =
+            '<div class="loading">Memuat jadwal hari ini...</div>';
+
+          if (fetchData && allActivities.length === 0) {
+            await fetchSpreadsheetData();
+          }
+
+          if (allActivities.length === 0) {
+            return; // Error already displayed in fetchSpreadsheetData
+          }
+
+          // Format today's date to match spreadsheet format (e.g., "22-April-2025")
+          const today = new Date();
+          const day = today.getDate();
+          const monthNames = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember",
+          ];
+          const month = monthNames[today.getMonth()];
+          const year = today.getFullYear();
+
+          const todayFormatted = `${day}-${month}-${year}`;
+
+          debugInfo("Looking for activities on: " + todayFormatted);
+
+          // Filter activities for today AND with non-empty agenda
+          const todayActivities = allActivities.filter((activity) => {
+            debugInfo(
+              "Comparing: '" +
+                activity.Tanggal +
+                "' with '" +
+                todayFormatted +
+                "'"
+            );
+            return (
+              activity.Tanggal === todayFormatted &&
+              activity.Agenda &&
+              activity.Agenda.trim() !== "" &&
+              activity.Agenda !== "-"
+            );
+          });
+
+          debugInfo(
+            "Found " + todayActivities.length + " activities for today"
+          );
+
+          if (todayActivities.length === 0) {
+            contentArea.innerHTML =
+              '<div class="no-data">Tidak ada kegiatan untuk hari ini</div>';
+            return;
+          }
+
+          // Sort activities by time
+          todayActivities.sort((a, b) => {
+            return a.Jam.localeCompare(b.Jam);
+          });
+
+          // Create daily view table
+          let dailyViewHTML = `
                 <div class="daily-view">
-                    <h2>Jadwal Kegiatan: ${todayFormatted}</h2>
+                    
                     <table>
                         <thead>
                             <tr>
@@ -776,213 +884,310 @@
                         </thead>
                         <tbody>
             `;
-            
-            todayActivities.forEach(activity => {
-                dailyViewHTML += `
-                    <tr>
-                        <td class="jam-column">${activity.Jam}</td>
-                        <td class="agenda-column">${activity.Agenda}</td>
-                        <td>${activity.PIC}</td>
-                        <td>${activity.Tempat}</td>
-                    </tr>
-                `;
-            });
-            
+
+          todayActivities.forEach((activity) => {
+            // Proses kolom tempat untuk URL
+            let tempat = activity.Tempat;
+
+            // Cek apakah tempat berisi URL
+            if (
+              tempat &&
+              (tempat.startsWith("http://") || tempat.startsWith("https://"))
+            ) {
+              try {
+                // Buat objek URL
+                const url = new URL(tempat);
+                // Buat versi pendek URL (hostname + pathname yang dipotong)
+                const shortUrl =
+                  url.hostname +
+                  (url.pathname.length > 15
+                    ? url.pathname.substring(0, 15) + "..."
+                    : url.pathname);
+                // Buat elemen link
+                tempat = `<a href="${tempat}" target="_blank" style="color: #3f51b5; text-decoration: underline;">${shortUrl}</a>`;
+              } catch (e) {
+                // Jika URL tidak valid, tampilkan apa adanya
+                console.error("Invalid URL:", tempat);
+              }
+            }
+
             dailyViewHTML += `
+        <tr>
+            <td class="jam-column">${activity.Jam}</td>
+            <td class="agenda-column">${activity.Agenda}</td>
+            <td>${activity.PIC}</td>
+            <td>${tempat}</td>
+        </tr>
+    `;
+          });
+
+          dailyViewHTML += `
                         </tbody>
                     </table>
                 </div>
             `;
-            
-            contentArea.innerHTML = dailyViewHTML;
+
+          contentArea.innerHTML = dailyViewHTML;
         }
-        
+
         // Function to load weekly view (activities grouped by day)
-// Function to load weekly view (activities grouped by day)
-async function loadWeeklyView(fetchData = true) {
-    contentArea.innerHTML = '<div class="loading">Memuat jadwal minggu ini...</div>';
-    
-    if (fetchData && allActivities.length === 0) {
-        await fetchSpreadsheetData();
-    }
-    
-    if (allActivities.length === 0) {
-        return; // Error already displayed in fetchSpreadsheetData
-    }
-    
-    // Filter out activities with empty or "-" agendas
-    const filteredActivities = allActivities.filter(activity => {
-        return activity.Agenda && activity.Agenda.trim() !== "" && activity.Agenda !== "-";
-    });
-    
-    // Get current date
-    const today = new Date();
-    
-    // Calculate the start (Monday) and end (Friday) of the current week
-    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
-    // Calculate how many days to go back to find Monday (or forward if it's Sunday)
-    const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay; // If Sunday, go back 6 days, otherwise calculate normally
-    
-    // Get Monday's date
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + daysToMonday);
-    
-    // Create array of weekday dates
-    const weekDays = [];
-    const weekDayDates = [];
-    
-    for (let i = 0; i < 5; i++) { // Monday to Friday (5 days)
-        const day = new Date(monday);
-        day.setDate(monday.getDate() + i);
-        
-        // Format for display
-        const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        weekDays.push(dayNames[day.getDay()]);
-        
-        // Format the date as "DD-Month-YYYY" to match spreadsheet format
-        const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        const formattedDate = `${day.getDate()}-${monthNames[day.getMonth()]}-${day.getFullYear()}`;
-        weekDayDates.push(formattedDate);
-    }
-    
-    // Group activities by day of week
-    const dayActivities = {
-        'Senin': [],
-        'Selasa': [],
-        'Rabu': [],
-        'Kamis': [],
-        'Jumat': []
-    };
-    
-    // Match activities with days of this week
-    filteredActivities.forEach(activity => {
-        // Check if this activity's date is in this week
-        const dayIndex = weekDayDates.indexOf(activity.Tanggal);
-        if (dayIndex !== -1) {
-            const dayName = weekDays[dayIndex];
-            if (dayActivities[dayName]) {
+
+        // Function to load weekly view (activities grouped by day)
+        async function loadWeeklyView(fetchData = true) {
+          contentArea.innerHTML =
+            '<div class="loading">Memuat jadwal minggu ini...</div>';
+
+          if (fetchData && allActivities.length === 0) {
+            await fetchSpreadsheetData();
+          }
+
+          if (allActivities.length === 0) {
+            return; // Error already displayed in fetchSpreadsheetData
+          }
+
+          // Filter out activities with empty or "-" agendas
+          const filteredActivities = allActivities.filter((activity) => {
+            return (
+              activity.Agenda &&
+              activity.Agenda.trim() !== "" &&
+              activity.Agenda !== "-"
+            );
+          });
+
+          // Get current date
+          const today = new Date();
+
+          // Calculate the start (Monday) and end (Sunday) of the current week
+          const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+          // Calculate how many days to go back to find Monday (or forward if it's Sunday)
+          const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay; // If Sunday, go back 6 days, otherwise calculate normally
+
+          // Get Monday's date
+          const monday = new Date(today);
+          monday.setDate(today.getDate() + daysToMonday);
+
+          // Create array of weekday dates
+          const weekDays = [];
+          const weekDayDates = [];
+
+          for (let i = 0; i < 7; i++) {
+            // Monday to Sunday (7 days)
+            const day = new Date(monday);
+            day.setDate(monday.getDate() + i);
+
+            // Format for display
+            const dayNames = [
+              "Minggu",
+              "Senin",
+              "Selasa",
+              "Rabu",
+              "Kamis",
+              "Jumat",
+              "Sabtu",
+            ];
+            weekDays.push(dayNames[day.getDay()]);
+
+            // Format the date as "DD-Month-YYYY" to match spreadsheet format
+            const monthNames = [
+              "Januari",
+              "Februari",
+              "Maret",
+              "April",
+              "Mei",
+              "Juni",
+              "Juli",
+              "Agustus",
+              "September",
+              "Oktober",
+              "November",
+              "Desember",
+            ];
+            const formattedDate = `${day.getDate()}-${
+              monthNames[day.getMonth()]
+            }-${day.getFullYear()}`;
+            weekDayDates.push(formattedDate);
+          }
+
+          // Group activities by day of week
+          const dayActivities = {
+            Senin: [],
+            Selasa: [],
+            Rabu: [],
+            Kamis: [],
+            Jumat: [],
+            Sabtu: [],
+            Minggu: [],
+          };
+
+          // Match activities with days of this week
+          filteredActivities.forEach((activity) => {
+            // Check if this activity's date is in this week
+            const dayIndex = weekDayDates.indexOf(activity.Tanggal);
+            if (dayIndex !== -1) {
+              const dayName = weekDays[dayIndex];
+              if (dayActivities[dayName]) {
                 dayActivities[dayName].push(activity);
+              }
             }
-        }
-    });
-    
-    // Create weekly view HTML
-    let weeklyViewHTML = `<div class="weekly-view">`;
-    
-    // Generate HTML for each day
-    weekDays.forEach((day, index) => {
-        const dayLower = day.toLowerCase();
-        const dateDisplay = weekDayDates[index];
-        
-        // Create day card
-        weeklyViewHTML += `
-            <div class="day-card ${dayLower}">
-                <div class="day-header">${day.toUpperCase()} (${dateDisplay.split('-')[0]})</div>
-                <div class="day-content">
-        `;
-        
-        // Add activities - but only unique agenda items
-        if (dayActivities[day] && dayActivities[day].length > 0) {
-            // Create a unique set of agenda items
-            const uniqueAgendas = new Set();
-            const uniqueActivities = [];
-            
-            // Filter out duplicate agenda items
-            dayActivities[day].forEach(activity => {
+          });
+
+          // Create weekly view HTML
+          let weeklyViewHTML = `<div class="weekly-view">`;
+
+          // Buat array untuk hari kerja dan hari weekend terpisah
+          const weekdayCards = [];
+          const weekendCards = [];
+
+          // Generate HTML untuk setiap hari
+          weekDays.forEach((day, index) => {
+            const dayLower = day.toLowerCase();
+            const dateDisplay = weekDayDates[index];
+
+            // Ekstrak tanggal dan bulan dari format "DD-Bulan-YYYY"
+            const dateParts = dateDisplay.split("-");
+            const dayNumber = dateParts[0];
+            const monthName = dateParts[1];
+
+            // Format tampilan: Hari(DD Bulan)
+            const formattedDateDisplay = `${day}(${dayNumber} ${monthName})`;
+
+            // Buat HTML untuk kartu hari
+            const dayActivitiesHtml = [];
+
+            if (dayActivities[day] && dayActivities[day].length > 0) {
+              // Create a unique set of agenda items
+              const uniqueAgendas = new Set();
+              const uniqueActivities = [];
+
+              // Filter out duplicate agenda items
+              dayActivities[day].forEach((activity) => {
                 if (!uniqueAgendas.has(activity.Agenda)) {
-                    uniqueAgendas.add(activity.Agenda);
-                    uniqueActivities.push(activity);
+                  uniqueAgendas.add(activity.Agenda);
+                  uniqueActivities.push(activity);
                 }
-            });
-            
-            // Now display only the unique activities
-            uniqueActivities.forEach(activity => {
-                weeklyViewHTML += `
+              });
+
+              // Now display only the unique activities
+              uniqueActivities.forEach((activity) => {
+                dayActivitiesHtml.push(`
                     <div class="activity-item">
                         <div class="activity-check"></div>
                         <div class="activity-name">${activity.Agenda}</div>
                         <div class="activity-time">${activity.Jam}</div>
                     </div>
-                `;
-            });
-        } else {
-            weeklyViewHTML += `<div class="activity-item">Tidak ada kegiatan</div>`;
-        }
-        
-        weeklyViewHTML += `
+                `);
+              });
+            } else {
+              dayActivitiesHtml.push(
+                `<div class="activity-item">Tidak ada kegiatan</div>`
+              );
+            }
+
+            // Buat card HTML
+            const dayCardHtml = `
+            <div class="day-card ${dayLower}">
+                <div class="day-header">${formattedDateDisplay}</div>
+                <div class="day-content">
+                    ${dayActivitiesHtml.join("")}
                 </div>
             </div>
         `;
-    });
-    
-    weeklyViewHTML += `</div>`;
-    contentArea.innerHTML = weeklyViewHTML;
-    
-    // Debug info
-    console.log("Week dates generated:", weekDayDates);
-}
+
+            // Tambahkan ke array sesuai jenis hari
+            if (day === "Sabtu" || day === "Minggu") {
+              // Untuk weekend, selalu tampilkan
+              weekendCards.push(dayCardHtml);
+            } else {
+              // Untuk hari kerja (Senin-Jumat), selalu tampilkan
+              weekdayCards.push(dayCardHtml);
+            }
+          });
+
+          // Tambahkan hari kerja ke HTML mingguan
+          weekdayCards.forEach((card) => {
+            weeklyViewHTML += card;
+          });
+
+          // Tambahkan div untuk weekend cards
+          weeklyViewHTML += `<div class="weekend-container">`;
+          weekendCards.forEach((card) => {
+            weeklyViewHTML += card;
+          });
+          weeklyViewHTML += `</div>`;
+
+          // Tutup weekly-view div
+          weeklyViewHTML += `</div>`;
+
+          contentArea.innerHTML = weeklyViewHTML;
+
+          document.head.appendChild(styleElement);
+
+          // Debug info
+          console.log("Week dates generated:", weekDayDates);
+        }
         // Set up auto-refresh
         function setupAutoRefresh() {
-            setInterval(async () => {
-                debugInfo("Auto-refreshing data...");
-                await fetchSpreadsheetData(true);
-            }, REFRESH_INTERVAL);
+          setInterval(async () => {
+            debugInfo("Auto-refreshing data...");
+            await fetchSpreadsheetData(true);
+          }, REFRESH_INTERVAL);
         }
-        
+
         // Add a status indicator in the footer
-        const container = document.querySelector('.container');
-        const footer = document.createElement('footer');
-        footer.style.borderTop = '1px solid #e0e0e0';
-        footer.style.marginTop = '20px';
-        footer.style.paddingTop = '10px';
-        footer.style.textAlign = 'center';
-        footer.style.color = '#757575';
-        footer.style.fontSize = '12px';
-        
-        const lastUpdatedSpan = document.createElement('span');
-        lastUpdatedSpan.id = 'last-updated';
-        lastUpdatedSpan.textContent = 'Memuat data...';
-        
-        footer.innerHTML = 'Terakhir diperbarui: ';
+        const container = document.querySelector(".container");
+        const footer = document.createElement("footer");
+        footer.style.borderTop = "1px solid #e0e0e0";
+        footer.style.marginTop = "20px";
+        footer.style.paddingTop = "10px";
+        footer.style.textAlign = "center";
+        footer.style.color = "#757575";
+        footer.style.fontSize = "12px";
+
+        const lastUpdatedSpan = document.createElement("span");
+        lastUpdatedSpan.id = "last-updated";
+        lastUpdatedSpan.textContent = "Memuat data...";
+
+        footer.innerHTML = "Terakhir diperbarui: ";
         footer.appendChild(lastUpdatedSpan);
-        
+
         // Add auto-refresh status
-        const autoRefreshStatus = document.createElement('div');
-        autoRefreshStatus.style.marginTop = '5px';
-        autoRefreshStatus.innerHTML = `Auto-refresh aktif: <span style="color: #4CAF50;">✓</span> (setiap ${REFRESH_INTERVAL/1000} detik)`;
+        const autoRefreshStatus = document.createElement("div");
+        autoRefreshStatus.style.marginTop = "5px";
+        autoRefreshStatus.innerHTML = `Auto-refresh aktif: <span style="color: #4CAF50;">✓</span> (setiap ${
+          REFRESH_INTERVAL / 1000
+        } detik)`;
         footer.appendChild(autoRefreshStatus);
-        
+
         container.appendChild(footer);
-        
+
         // Update the last updated time
         function updateLastUpdatedTime() {
-            const lastUpdatedElement = document.getElementById('last-updated');
-            if (lastUpdatedElement) {
-                if (lastFetchTime) {
-                    const formattedTime = lastFetchTime.toLocaleTimeString('id-ID', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                    lastUpdatedElement.textContent = formattedTime;
-                } else {
-                    lastUpdatedElement.textContent = 'Belum diperbarui';
-                }
+          const lastUpdatedElement = document.getElementById("last-updated");
+          if (lastUpdatedElement) {
+            if (lastFetchTime) {
+              const formattedTime = lastFetchTime.toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+              lastUpdatedElement.textContent = formattedTime;
+            } else {
+              lastUpdatedElement.textContent = "Belum diperbarui";
             }
+          }
         }
-        
+
         // Initial load - full table view and setup auto-refresh
         loadFullTableView();
         setupAutoRefresh();
-        
+
         // Start inactivity timer
         resetInactivityTimer();
-        
+
         // Update last updated time when we have it
         setInterval(updateLastUpdatedTime, 1000);
-    });
+      });
     </script>
-
-</body>
+  </body>
 </html>
