@@ -8,6 +8,23 @@
     <link rel="icon" type="image/png" href="icon.png" />
     <link rel="shortcut icon" href="icon.png" />
     <link rel="apple-touch-icon" href="icon.png" />
+
+    <!-- Favicon standar untuk desktop -->
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="shortcut icon" href="icon.png" />
+
+    <!-- iOS icons -->
+    <link rel="apple-touch-icon" href="icon.png" />
+    <link rel="apple-touch-icon-precomposed" href="icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Jadwal Kegiatan" />
+
+    <!-- Android icons -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#3f51b5" />
+
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -597,6 +614,62 @@
         overflow: hidden;
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
       }
+
+      /* Tambahan CSS untuk full-table-view */
+.full-table-view table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  table-layout: fixed; /* Membuat tabel fixed */
+}
+
+.full-table-view th {
+  background-color: #3f51b5;
+  color: white;
+  padding: 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.full-table-view th:last-child {
+  border-right: none;
+}
+
+.full-table-view td {
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid rgba(200, 200, 220, 0.4);
+  word-wrap: break-word; /* Membuat teks panjang menurun ke bawah */
+  overflow-wrap: break-word;
+  vertical-align: top;
+}
+
+.full-table-view td:last-child {
+  border-right: none;
+}
+
+.full-table-view tr:hover td {
+  background-color: #f5f5f5;
+}
+
+.full-table-view a {
+  color: #3f51b5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.full-table-view a:hover {
+  color: #1a237e;
+}
+
+/* Lebar kolom yang fixed */
+.full-table-view th:nth-child(1), .full-table-view td:nth-child(1) { width: 12%; } /* Tanggal */
+.full-table-view th:nth-child(2), .full-table-view td:nth-child(2) { width: 10%; } /* Jam */
+.full-table-view th:nth-child(3), .full-table-view td:nth-child(3) { width: 40%; } /* Agenda */
+.full-table-view th:nth-child(4), .full-table-view td:nth-child(4) { width: 18%; } /* PIC */
+.full-table-view th:nth-child(5), .full-table-view td:nth-child(5) { width: 20%; } /* Tempat */
     </style>
   </head>
   <body>
@@ -969,36 +1042,59 @@
           }
         }
 
+        // Fungsi untuk memformat string jam
+function formatTimeString(timeString) {
+  if (!timeString) return "";
+  
+  // Jika format memiliki pola seperti "09:00:00-11:00:00"
+  if (timeString.includes('-')) {
+    const times = timeString.split('-');
+    return times.map(time => {
+      // Ambil hanya jam dan menit (format HH:MM) dari tiap bagian
+      const timeParts = time.split(':');
+      if (timeParts.length >= 2) {
+        return `${timeParts[0]}:${timeParts[1]}`;
+      }
+      return time;
+    }).join('-');
+  }
+  
+  // Untuk format jam tunggal tanpa range
+  const timeParts = timeString.split(':');
+  if (timeParts.length >= 2) {
+    return `${timeParts[0]}:${timeParts[1]}`;
+  }
+  
+  return timeString;
+}
+
         // Function to load the full table view (all activities)
+async function loadFullTableView(fetchData = true) {
+  contentArea.innerHTML = '<div class="loading">Memuat seluruh jadwal kegiatan...</div>';
 
-        async function loadFullTableView(fetchData = true) {
-          contentArea.innerHTML =
-            '<div class="loading">Memuat seluruh jadwal kegiatan...</div>';
+  if (fetchData && allActivities.length === 0) {
+    await fetchSpreadsheetData();
+  }
 
-          if (fetchData && allActivities.length === 0) {
-            await fetchSpreadsheetData();
-          }
+  if (allActivities.length === 0) {
+    return; // Error already displayed in fetchSpreadsheetData
+  }
 
-          if (allActivities.length === 0) {
-            return; // Error already displayed in fetchSpreadsheetData
-          }
+  // Filter out activities with empty or "-" agendas
+  const filteredActivities = allActivities.filter((activity) => {
+    return (
+      activity.Agenda &&
+      activity.Agenda.trim() !== "" &&
+      activity.Agenda !== "-"
+    );
+  });
 
-          // Filter out activities with empty or "-" agendas
-          const filteredActivities = allActivities.filter((activity) => {
-            return (
-              activity.Agenda &&
-              activity.Agenda.trim() !== "" &&
-              activity.Agenda !== "-"
-            );
-          });
+  if (filteredActivities.length === 0) {
+    contentArea.innerHTML = '<div class="no-data">Tidak ada kegiatan untuk ditampilkan</div>';
+    return;
+  }
 
-          if (filteredActivities.length === 0) {
-            contentArea.innerHTML =
-              '<div class="no-data">Tidak ada kegiatan untuk ditampilkan</div>';
-            return;
-          }
-
-          let tableHTML = `
+  let tableHTML = `
     <div class="full-table-view">
       <table>
         <thead>
@@ -1013,32 +1109,54 @@
         <tbody>
   `;
 
-          filteredActivities.forEach((activity) => {
-            // Format tanggal dari "DD-Bulan-YYYY" menjadi "DD Bulan YYYY"
-            let formattedDate = activity.Tanggal;
-            if (formattedDate && formattedDate.includes("-")) {
-              formattedDate = formattedDate.split("-").join(" ");
-            }
+  filteredActivities.forEach((activity) => {
+    // Format tanggal dari "DD-Bulan-YYYY" menjadi "DD Bulan YYYY"
+    let formattedDate = activity.Tanggal;
+    if (formattedDate && formattedDate.includes("-")) {
+      formattedDate = formattedDate.split("-").join(" ");
+    }
+    
+    // Format waktu untuk menghilangkan detik
+    let formattedTime = formatTimeString(activity.Jam);
+    
+    // Proses kolom tempat untuk URL
+    let tempat = activity.Tempat;
+    
+    // Cek apakah tempat berisi URL
+    if (tempat && (tempat.startsWith("http://") || tempat.startsWith("https://"))) {
+      try {
+        // Buat objek URL
+        const url = new URL(tempat);
+        // Buat versi pendek URL (hostname + pathname yang dipotong)
+        const shortUrl = url.hostname + 
+          (url.pathname.length > 15 ? url.pathname.substring(0, 15) + "..." : url.pathname);
+        // Buat elemen link
+        tempat = `<a href="${tempat}" target="_blank" style="color: #3f51b5; text-decoration: underline;">${shortUrl}</a>`;
+      } catch (e) {
+        // Jika URL tidak valid, tampilkan apa adanya
+        console.error("Invalid URL:", tempat);
+      }
+    }
 
-            tableHTML += `
+    tableHTML += `
       <tr>
         <td>${formattedDate}</td>
-        <td>${activity.Jam}</td>
+        <td>${formattedTime}</td>
         <td>${activity.Agenda}</td>
         <td>${activity.PIC}</td>
-        <td>${activity.Tempat}</td>
+        <td>${tempat}</td>
       </tr>
     `;
-          });
+  });
 
-          tableHTML += `
+  tableHTML += `
         </tbody>
       </table>
     </div>
   `;
 
-          contentArea.innerHTML = tableHTML;
-        }
+  contentArea.innerHTML = tableHTML;
+}
         // Function to load daily view (today's activities)
         async function loadDailyView(fetchData = true) {
           contentArea.innerHTML =
@@ -1051,6 +1169,8 @@
           if (allActivities.length === 0) {
             return; // Error already displayed in fetchSpreadsheetData
           }
+
+          
 
           // Format today's date to match spreadsheet format (e.g., "22-April-2025")
           const today = new Date();
@@ -1149,15 +1269,43 @@
                 console.error("Invalid URL:", tempat);
               }
             }
+            
 
-            dailyViewHTML += `
-        <tr>
-            <td class="jam-column">${activity.Jam}</td>
-            <td class="agenda-column">${activity.Agenda}</td>
-            <td>${activity.PIC}</td>
-            <td>${tempat}</td>
-        </tr>
-    `;
+// Fungsi untuk memformat string jam
+function formatTimeString(timeString) {
+  if (!timeString) return "";
+  
+  // Jika format memiliki pola seperti "09:00:00-11:00:00"
+  if (timeString.includes('-')) {
+    const times = timeString.split('-');
+    return times.map(time => {
+      // Ambil hanya jam dan menit (format HH:MM) dari tiap bagian
+      const timeParts = time.split(':');
+      if (timeParts.length >= 2) {
+        return `${timeParts[0]}:${timeParts[1]}`;
+      }
+      return time;
+    }).join('-');
+  }
+  
+  // Untuk format jam tunggal tanpa range
+  const timeParts = timeString.split(':');
+  if (timeParts.length >= 2) {
+    return `${timeParts[0]}:${timeParts[1]}`;
+  }
+  
+  return timeString;
+}
+
+// Kemudian di dalam loadDailyView(), ganti bagian yang menampilkan jam: 
+dailyViewHTML += `
+  <tr>
+      <td class="jam-column">${formatTimeString(activity.Jam)}</td>
+      <td class="agenda-column">${activity.Agenda}</td>
+      <td>${activity.PIC}</td>
+      <td>${tempat}</td>
+  </tr>
+`;
           });
 
           dailyViewHTML += `
@@ -1169,7 +1317,7 @@
           contentArea.innerHTML = dailyViewHTML;
         }
 
-        // Function to load weekly view (activities grouped by day)
+        
 
         // Function to load weekly view (activities grouped by day)
         async function loadWeeklyView(fetchData = true) {
